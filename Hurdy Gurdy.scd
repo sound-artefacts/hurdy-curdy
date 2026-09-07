@@ -72,9 +72,9 @@ var silver_r=(1+2.sqrt), g=((1+5.sqrt)/2), azimuth, elevation;
 ~azr=1;~elr=1;
 ~temperament=16256;
 ~lagtime=1/256;
-~frames=256.reciprocal;
+~frames=512.reciprocal;
 ~x=0;~y=0;~z=0;
-~ffreq=16;
+~ffreq=32;
 ~window=110;
 ~dur=~frames*~window;
 ~spinbind=0.5pi;
@@ -182,7 +182,7 @@ SynthDef.new(\synth,{
 arg gain=0,fundamental=0,resonanse=0,harm=1,room=0,drive=0,mag=0,dist=1,voice=0.1,
 tone=1,scselect=0,key=0,v=1,l1=1,l2=1,az=#[0,0,0,0],el=#[0,0,0,0];
 var level,res,revroom,overdrive,x,y,z,tx,ty,tz,trange,busarray2,pitchx,pitchy,pitch;
-var freqx,freqy,freqz,ampx,ampy,ampz,tonex,toney,tonez,tune=~ffreq*2*(9/8),phasex,phasey,phasez,snt;
+var freqx,freqy,freqz,ampx,ampy,ampz,tonex,toney,tonez,tune=~ffreq*(9/8),phasex,phasey,phasez,snt;
 var c1,c2,c3,sigx,sigy,sigz,azn,eln,cx,cy,cz,g1,g2,g3,g4,thresholdk,note;
 var n=0,polytope=2,busarray1,harmonic,fund,mix,a,b,cc,immersion,busarray,gate,threshold;
 var xp,yp,zp,kx,ky,kz,vx,vy,vz,formants,c12,c22,c32;
@@ -239,12 +239,12 @@ toney=2.pow(ty.round(1)/~temperament);
 tonez=2.pow(tz.round(1)/~temperament);
 
 ////osc data
-freqx=(fund*pitchx)*tonex*note;
-freqy=(fund*pitchy)*toney*note;
-freqz=fund*tonez*note;
+freqx=(fund*pitchx)*tonex;
+freqy=(fund*pitchy)*toney;
+freqz=fund*tonez;
 ampx=c.reciprocal*tonex.reciprocal*level*immersion;
 ampy=c.reciprocal*toney.reciprocal*level*immersion;
-ampz=c.reciprocal*tonez.reciprocal*level*note.reciprocal;
+ampz=c.reciprocal*tonez.reciprocal*level;
 //phase set
 //phasex=(Complex(1,x).theta*2);
 //phasey=(Complex(1,y).theta*2);
@@ -258,10 +258,10 @@ phasez=(z*2pi);
 
 
 /////////osc
-c1=BPF.ar((Osc.ar(~wt.bufnum,freqx,phase:phasex,mul:~complevel).abs*
-SinOsc.ar(freqx,phase:phasex)),freqx,res,ampx*x.sign);
-c2=BPF.ar((Osc.ar(~wt.bufnum,freqy,phase:phasey,mul:~complevel).abs*
-SinOsc.ar(freqy,phase:phasey)),freqy,res,ampy*y.sign);
+c1=BPF.ar((Osc.ar(~wt.bufnum,freqx*note,phase:phasex,mul:~complevel).abs*
+SinOsc.ar(freqx*note,phase:phasex)),freqx*note,res,ampx*x.sign*note.reciprocal);
+c2=BPF.ar((Osc.ar(~wt.bufnum,freqy*note,phase:phasey,mul:~complevel).abs*
+SinOsc.ar(freqy*note,phase:phasey)),freqy*note,res,ampy*y.sign*note.reciprocal);
 c3=BPF.ar((Osc.ar(~wt.bufnum,freqz,phase:phasez,mul:~complevel).abs*
 SinOsc.ar(freqz,phase:phasez)),freqz,res,ampz*z.sign);
 
@@ -388,7 +388,7 @@ n=n+1;
 }).add;
 );
 
-2.wait;
+4.wait;
 
 ///data
 (
