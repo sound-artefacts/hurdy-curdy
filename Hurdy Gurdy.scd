@@ -4,7 +4,7 @@
 (
 (
 s.options.numWireBufs = 1024*16;
-s.options.numOutputBusChannels=4;
+s.options.numOutputBusChannels=5;
 s.options.numInputBusChannels=0;
 s.options.memSize = 8192*256;
 s.options.blockSize = 64;
@@ -343,9 +343,9 @@ cc=vz;*/
 //use z for mono out
 //busarray1=[0,2,4,6,8,10,12,14];
 //busarray2=[1,3,5,7,9,11,13,15];
-//Out.ar(busarray1.[0],a.softclip(3));
-//Out.ar(busarray2.[0],b.softclip(3));
-//Out.ar(2,cc.softclip(3));
+Out.ar(2,a.softclip(3));
+Out.ar(3,b.softclip(3));
+Out.ar(4,cc.softclip(3));
 
 //vbap out
 /*(
@@ -364,8 +364,8 @@ Out.ar(3,cc.softclip(3)*g4);
 )*/
 
 //pan stereo out, wavefield mixed, if recorded on stereo stereo ouput acoustics present, if mono out record, audio format stereo speakers
-Out.ar(0,Pan2.ar(a.softclip(3),(x.clip2(1))*1));
-Out.ar(0,Pan2.ar(b.softclip(3),(y.clip2(1))*1));
+Out.ar(0,Pan2.ar(a.softclip(3),(x.clip2(1))*immersion));
+Out.ar(0,Pan2.ar(b.softclip(3),(y.clip2(1))*immersion));
 Out.ar(0,Pan2.ar(cc.softclip(3),(z.clip2(1))));
 
 //quad out
