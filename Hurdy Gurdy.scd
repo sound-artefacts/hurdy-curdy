@@ -1,6 +1,6 @@
   ///Quarks.install("MathLib");
 
-s.record(numChannels:6);
+//s.record(numChannels:6);
 (
 (
 s.options.numWireBufs = 1024*16;
@@ -59,11 +59,7 @@ var silver_r=(1+2.sqrt), g=((1+5.sqrt)/2), azimuth, elevation;
 ~elevation=[35.264390.neg.degrad,35.264390.neg.degrad,35.264390.degrad,35.264390.degrad];
 //~elevation=[0,0,0,0];
 );
-/*(
-~azimuther=[45.degrad,135.neg.degrad,45.neg.degrad,135.degrad];
-~elevationr=[35.264390.neg.degrad,35.264390.neg.degrad,35.264390.degrad,35.264390.degrad];
-//~elevation=[0,0,0,0];
-)*/
+
 
 0.1.wait;
 
@@ -74,7 +70,7 @@ var silver_r=(1+2.sqrt), g=((1+5.sqrt)/2), azimuth, elevation;
 ~lagtime=1/256;
 ~frames=512.reciprocal;
 ~x=0;~y=0;~z=0;
-~ffreq=32;
+~ffreq=64;
 ~window=110;
 ~dur=~frames*~window;
 ~spinbind=0.5pi;
@@ -98,8 +94,8 @@ sph=Spherical(1,az,el);
 sph=sph.rotateYZ(~x.lag2(~lagtime)).rotateXZ(~y.lag2(~lagtime)).rotateXY(~z.lag2(~lagtime));//orchestral
 ~az=~az++[sph.theta];
 ~el=~el++[sph.phi];
-~az=~az.wrap2(~spinbind);
-~el=~el.wrap2(~spinbind/2);
+~az=~az.clip2(~spinbind);
+~el=~el.clip2(~spinbind/2);
 };
 (~frames).wait;
 };
@@ -111,9 +107,9 @@ sph=sph.rotateYZ(~x.lag2(~lagtime)).rotateXZ(~y.lag2(~lagtime)).rotateXY(~z.lag2
 {var rot;
 Routine({loop{
 //rot=Spherical(~dur,~azr,~elr);
-~x=(~x+(~azr*((2pi-(2pi/~g))*(~frames/16)))).wrap(0,2pi);
-~y=(~y+(~azr*((2pi-(2pi/~g))*(~frames/16)))).wrap(0,2pi);
-~z=(~z+(~azr*((2pi-(2pi/~g))*(~frames/16)))).wrap(0,2pi);
+~x=(~x+(~azr*((2pi-(2pi/~g))*(~frames/64)))).wrap(0,2pi);
+~y=(~y+(~azr*((2pi-(2pi/~g))*(~frames/64)))).wrap(0,2pi);
+~z=(~z+(~elr*((2pi-(2pi/~g))*(~frames/64)))).wrap(0,2pi);
 (~frames).wait;
 };
 }).play;
@@ -126,7 +122,7 @@ Routine({loop{
 (
 ~n=1.neg;~array=~wavec.collect{~n=~n+1;2.pow(~n/~wavec)};
 ~n=(0-(2pi/~wavec)); ~ph=~wavec.collect{~n=~n+(2pi/~wavec);};
-~bufferSize = 2048*4;~signalSize = 1024*4;
+~bufferSize = 2048*8;~signalSize = 1024*8;
 ~wt= Buffer.alloc(s,~bufferSize);
 {
 var signal,wt;
@@ -171,7 +167,7 @@ nn=1.neg;
 ////seq
 ~fuselim=(16256*9).neg;
 ~comp=3;
-~distortion=0.25;
+~distortion=0.1;
 ~noise=0.0001;
 ~complevel=1024;
 ///////////////////feed
@@ -185,7 +181,7 @@ var level,res,revroom,overdrive,x,y,z,tx,ty,tz,trange,busarray2,pitchx,pitchy,pi
 var freqx,freqy,freqz,ampx,ampy,ampz,tonex,toney,tonez,tune=~ffreq*(9/8),phasex,phasey,phasez,snt;
 var c1,c2,c3,sigx,sigy,sigz,azn,eln,cx,cy,cz,g1,g2,g3,g4,thresholdk,note;
 var n=0,polytope=2,busarray1,harmonic,fund,mix,a,b,cc,immersion,busarray,gate,threshold;
-var xp,yp,zp,kx,ky,kz,vx,vy,vz,formants,c12,c22,c32;
+var xp,yp,zp,kx,ky,kz,vx,vy,vz,formants,c12,c22,env;
 
 ///inputs
 level=2.pow(gain.lag2(~lagtime)/16256);
@@ -201,6 +197,8 @@ level=level;
 
 note=2.pow(key.lag2(~lagtime)/12);
 
+env=EnvGen.ar(Env.perc(0.01,2,0.5),gate:Trig1.kr(Changed.kr(key), 0.01));
+level=level*(env+1);
 
 ///pitch
 fund=c*tune;
@@ -239,12 +237,12 @@ toney=2.pow(ty.round(1)/~temperament);
 tonez=2.pow(tz.round(1)/~temperament);
 
 ////osc data
-freqx=(fund*pitchx)*tonex;
-freqy=(fund*pitchy)*toney;
-freqz=fund*tonez;
-ampx=c.reciprocal*tonex.reciprocal*level*immersion;
-ampy=c.reciprocal*toney.reciprocal*level*immersion;
-ampz=c.reciprocal*tonez.reciprocal*level;
+freqx=(fund*pitchx)*tonex*note;
+freqy=(fund*pitchy)*toney*note;
+freqz=fund*tonez*note;
+ampx=c.reciprocal*tonex.reciprocal*level*note.reciprocal;
+ampy=c.reciprocal*toney.reciprocal*level*note.reciprocal;
+ampz=c.reciprocal*tonez.reciprocal*level*note.reciprocal;
 //phase set
 //phasex=(Complex(1,x).theta*2);
 //phasey=(Complex(1,y).theta*2);
@@ -258,21 +256,19 @@ phasez=(z*2pi);
 
 
 /////////osc
-c1=BPF.ar((Osc.ar(~wt.bufnum,freqx*note,phase:phasex,mul:~complevel).abs*
-SinOsc.ar(freqx*note,phase:phasex)),freqx*note,res,ampx*x.sign*note.reciprocal);
-c2=BPF.ar((Osc.ar(~wt.bufnum,freqy*note,phase:phasey,mul:~complevel).abs*
-SinOsc.ar(freqy*note,phase:phasey)),freqy*note,res,ampy*y.sign*note.reciprocal);
+c1=BPF.ar((Osc.ar(~wt.bufnum,freqx,phase:phasex,mul:~complevel).abs*
+SinOsc.ar(freqx,phase:phasex)),freqx,res,ampx*x.sign*immersion);
+c2=BPF.ar((Osc.ar(~wt.bufnum,freqy,phase:phasey,mul:~complevel).abs*
+SinOsc.ar(freqy,phase:phasey)),freqy,res,ampy*y.sign*immersion);
 c3=BPF.ar((Osc.ar(~wt.bufnum,freqz,phase:phasez,mul:~complevel).abs*
 SinOsc.ar(freqz,phase:phasez)),freqz,res,ampz*z.sign);
 
-c12=BPF.ar((Osc.ar(~wt.bufnum,freqx*2,phase:phasex,mul:~complevel).abs*
-SinOsc.ar(freqx*2,phase:phasex)),freqx*2,res,ampx*x.sign/2)*l1;
-c22=BPF.ar((Osc.ar(~wt.bufnum,freqy*2,phase:phasey,mul:~complevel).abs*
-SinOsc.ar(freqy*2,phase:phasey)),freqy*2,res,ampy*y.sign/2)*l1;
-c32=BPF.ar((Osc.ar(~wt.bufnum,freqz*2,phase:phasez,mul:~complevel).abs*
-SinOsc.ar(freqz*2,phase:phasez)),freqz*2,res,ampz*z.sign/2)*l2;
+c12=BPF.ar((Osc.ar(~wt.bufnum,(fund)*2,phase:phasex,mul:~complevel).abs*
+SinOsc.ar((fund)*2,phase:phasex)),(fund)*2,res,ampx*x.sign/2)*l1;
+c22=BPF.ar((Osc.ar(~wt.bufnum,(fund)/2,phase:phasey,mul:~complevel).abs*
+SinOsc.ar((fund)/2,phase:phasey)),(fund)/2,res,ampy*y.sign*2)*l2;
 
-c1=c1+c12; c2=c2+c22; c3=c3+c32;
+c1=c1+c12; c2=c2+c22;
 ///distortion
 mix=overdrive.linlin(1,2.pow(~fuselim/16256),2.pow(~fuselim/16256),1);
 
@@ -280,8 +276,8 @@ c1=c1.lag2(~signalSize.reciprocal)*
 (LPF.ar(Saw.ar(tune,(ampx)),tune*64*mix).fold2(mix*~distortion)+((ampx)));
 c2=c2.lag2(~signalSize.reciprocal)*
 (LPF.ar(Saw.ar(tune,(ampy)),tune*64*mix).fold2(mix*~distortion)+((ampy)));
-//c3=c3.lag2(~signalSize.reciprocal)*
-//(LPF.ar(Saw.ar(tune,(ampz)),tune*64*mix).fold2(mix*~distortion)+((ampz)));
+c3=c3.lag2(~signalSize.reciprocal)*
+(LPF.ar(Saw.ar(tune,(ampz)),tune*64*mix).fold2(mix*~distortion)+((ampz)));
 
 ///rev
 sigx=FreeVerb.ar((c1).fold2(overdrive*~comp),xp.lag2(0.1).fold2(1).abs,revroom);
@@ -321,9 +317,9 @@ b=HPF.ar((LeakDC.ar((sigy)*((sigz).fold2(overdrive*~distortion)+(ampz)))),64);
 cc=HPF.ar((LeakDC.ar((sigz)*((sigz).fold2(overdrive*~distortion)+(ampz)))),64);
 
 threshold=(((343/0.15)/tune).reciprocal.ampdb/2.sqrt).dbamp;
-a=Compander.ar(a,sigx,threshold,1.2,1/3,0.03,0.15)+BrownNoise.ar(0.000001);
-b=Compander.ar(b,sigy,threshold,1.2,1/3,0.03,0.15)+BrownNoise.ar(0.000001);
-cc=Compander.ar(cc,sigz,threshold,1.2,1/3,0.03,0.15)+BrownNoise.ar(0.000001);
+a=Compander.ar(sigx,sigx,threshold,1.2,1/3,0.03,0.15)+BrownNoise.ar(0.000001);
+b=Compander.ar(sigy,sigy,threshold,1.2,1/3,0.03,0.15)+BrownNoise.ar(0.000001);
+cc=Compander.ar(sigz,sigz,threshold,1.2,1/3,0.03,0.15)+BrownNoise.ar(0.000001);
 
 //formants
 //aeiou	//freq,bandwidth,amp
@@ -368,8 +364,8 @@ Out.ar(3,cc.softclip(3)*g4);
 )*/
 
 //pan stereo out, wavefield mixed, if recorded on stereo stereo ouput acoustics present, if mono out record, audio format stereo speakers
-Out.ar(0,Pan2.ar(a.softclip(3),(x.clip2(1))*immersion));
-Out.ar(0,Pan2.ar(b.softclip(3),(y.clip2(1))*immersion));
+Out.ar(0,Pan2.ar(a.softclip(3),(x.clip2(1))*1));
+Out.ar(0,Pan2.ar(b.softclip(3),(y.clip2(1))*1));
 Out.ar(0,Pan2.ar(cc.softclip(3),(z.clip2(1))));
 
 //quad out
@@ -488,7 +484,8 @@ Pmono( \synth,
 );
 /*(
 ~pattern1.stop;
-~pattern2.stop;
+~pattern2.s
+top;
 
 		)*/
 
@@ -543,20 +540,19 @@ harm.postln;
 ~harm=harm;
 },5);
 );
-/*(
+(
 MIDIdef.cc(\midi_pot6,{ |val, num, chan, src|
 var hold;
-hold=val.linlin(0,127,16.neg,64).postln;
-hold.postln;
-~curve=hold;
+r=val.linlin(0,127,0.5pi.neg,0.5pi);
+~elr=r/2;
+r.postln;
 },6);
-)*/
+);
 (
 MIDIdef.cc(\midi_pot7,{ |val, num, chan, src|
 var r;
-r=val.linlin(0,127,pi.neg,pi);
+r=val.linlin(0,127,0.5pi.neg,0.5pi);
 ~azr=r;
-~elr=r/2;
 r.postln;
 },7);
 );
@@ -600,14 +596,14 @@ sc.postln;
 ~voice=sc;
 },12);
 );
-/*(
+(
 MIDIdef.cc(\midi_pot13,{ |val, num, chan, src|
-var k;
-k=val.linexp(0,127,0.0001,1);
-k.postln;
-~attack=k/~time;
+var note;
+note=val.linlin(0,127,0.01pi,pi);
+note.postln;
+~spinbind=note;
 },13);
-)*/
+);
 (
 MIDIdef.cc(\midi_pot14,{ |val, num, chan, src|
 var l1;
@@ -619,7 +615,7 @@ l1.postln;
 (
 MIDIdef.cc(\midi_pot15,{ |val, num, chan, src|
 var dist;
-dist=val.linlin(0,127,1,10);
+dist=val.linlin(0,127,0.01,10);
 dist.postln;
 ~dist=dist;
 },15);
@@ -636,9 +632,9 @@ l2.postln;
 (
 MIDIdef.cc(\midi_slider1,{ |val, num, chan, src|
 var note;
-note=val.linlin(0,127,0.01pi,pi);
+note=val.linlin(0,127,6,6).round(6);
 note.postln;
-~spinbind=note;
+~sn=note;
 },25);
 );
 (
@@ -660,7 +656,7 @@ note.postln;
 (
 MIDIdef.cc(\midi_slider4,{ |val, num, chan, src|
 var note;
-note=val.linlin(0,127,4,4).round(4);
+note=val.linlin(0,127,5,5).round(5);
 note.postln;
 ~sn=note;
 },28);
@@ -692,7 +688,7 @@ note.postln;
 (
 MIDIdef.cc(\midi_slider8,{ |val, num, chan, src|
 var note;
-note=val.linlin(0,127,5,5).round(5);
+note=val.linlin(0,127,12,12).round(12);
 note.postln;
 ~sn=note;
 },32);
@@ -700,7 +696,7 @@ note.postln;
 (
 MIDIdef.cc(\midi_slider9,{ |val, num, chan, src|
 var note;
-note=val.linlin(0,127,3,3).round(3);
+note=val.linlin(0,127,14,14).round(14);
 note.postln;
 ~sn=note;
 },33);
@@ -879,7 +875,7 @@ w = Window("tws", Rect(50, 50, size+800, size)).front;
 ~sl1=Knob.new(~vw1, Rect.new(50,50,sk, sk)).background_(Color.black).action_({
 arg obj;
 var value;
-value=obj.value.linlin(0,1,pi.neg,pi).postln;
+value=obj.value.linlin(0,1,0.5pi.neg,0.5pi).postln;
 //value=obj.value.linlin(0,1,1/4,4).round(1/16).postln;
 ~azr=value;
 ~elr=value/2;
